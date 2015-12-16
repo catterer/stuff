@@ -1,0 +1,9 @@
+installing composer https://getcomposer.org/download/
+installing reactphp http://reactphp.org/
+
+
+INSTALL
+curl -sS https://getcomposer.org/installer | php
+composer init --require=react/http:0.3.* -n
+composer install
+
