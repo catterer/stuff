@@ -1,1 +1,1 @@
-./src/main.php
+./src/Main.php
