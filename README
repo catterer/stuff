@@ -11,6 +11,10 @@ sendMessage.sh <fromUserId> <toUserId> <message body>
 fetchMessage.sh <userId>
     - gets new message for specified user. If there are no messages for him, result will be empty
 
+DEPENDENCIES
+php5-sql
+reactphp
+
 NOTES
 installing composer https://getcomposer.org/download/
 installing reactphp http://reactphp.org/
