@@ -1,8 +1,8 @@
 #!/usr/bin/env php
 <?php
 require 'vendor/autoload.php';
-require 'util.php';
 require 'Methods.php';
+require 'Storage.php';
 
 class Request {
     public $request;
@@ -11,21 +11,16 @@ class Request {
 
     private $rawInputJson;
     function __construct($rq, $rp) {
-        echo "req init\n";
         $this->request = $rq;
         $this->response = $rp;
     }
 
-    function __destruct() {
-        echo "req done\n";
-    }
-
     function abort($errcode, $reason) {
-        $this->sendAndClose($errcode, $reason);
+        $this->sendAndClose($errcode, $reason, NULL);
     }
 
     function done($data) {
-        $this->sendAndClose(200, $data);
+        $this->sendAndClose(200, "OK", $data);
     }
 
     function addInput($data) {
@@ -37,15 +32,18 @@ class Request {
     }
 
     function parseInput() {
-        $inputJson = json_decode($this->rawInputJson);
-        if ($inputJson === NULL) {
-        }
-        return $inputJson;
+        return json_decode($this->rawInputJson);
     }
 
-    private function sendAndClose($errcode, $data) {
-        $this->response->writeHead($errcode, array('Content-Type' => 'text/plain'));
-        $this->response->end("$data\n");
+    private function sendAndClose($code, $reason, $data) {
+        $json = new stdClass();
+        $json->code = $code;
+        $json->reason = $reason;
+        if ($data)
+            $json->results = $data;
+
+        $this->response->writeHead(200, array('Content-Type' => 'text/plain'));
+        $this->response->end(json_encode($json));
     }
 }
 
@@ -53,8 +51,9 @@ function main() {
     $loop = React\EventLoop\Factory::create();
     $socket = new React\Socket\Server($loop);
     $http = new React\Http\Server($socket, $loop);
+    $st = new Storage('im.db');
 
-    $http->on('request', function ($request, $response) {
+    $http->on('request', function ($request, $response) use ($st) {
         $r = new Request($request, $response);
 #       var_dump($r->request->getHeaders());
         if (!array_key_exists("Content-Length", $r->request->getHeaders())) {
@@ -62,7 +61,7 @@ function main() {
             return;
         }
         $r->contentLength = intval($r->request->getHeaders()["Content-Length"]);
-        $request->on('data', function($data) use ($r) {
+        $request->on('data', function($data) use ($r, $st) {
             $r->addInput($data);
             if (!$r->readyToProcess())
                 return;
@@ -79,7 +78,7 @@ function main() {
                 $r->abort(400, "Invalid method");
                 return;
             }
-            $methods[$js->method]($r);
+            $methods[$js->method]($r, $js, $st);
         });
     });
 
