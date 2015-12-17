@@ -1,9 +1,21 @@
 <?php
 
+function string_checker($s) {
+    return is_string($s);
+}
+
+function int_checker($s) {
+    return is_int($s);
+}
+
 function missingFields($httpReq, $json, $fields) {
-    foreach($fields as &$field) {
+    foreach($fields as $field => $checker) {
         if (!property_exists($json, $field)) {
             $httpReq->abort(400, "Field '$field' not specified");
+            return TRUE;
+        }
+        if (!call_user_func($checker, $json->$field)) {
+            $httpReq->abort(400, "Field '$field' has wrong type");
             return TRUE;
         }
     }
@@ -12,7 +24,10 @@ function missingFields($httpReq, $json, $fields) {
 
 $methods = array(
     'sendMessage' => function($httpReq, $json, $storage) {
-        if (missingFields($httpReq, $json, ["fromUserId", "toUserId", "body"]))
+        if (missingFields($httpReq, $json, [
+                "fromUserId" => 'int_checker',
+                "toUserId" => 'int_checker',
+                "body" => 'string_checker']))
             return;
 
         if (!$storage->getUser($json->fromUserId)) {
@@ -35,7 +50,7 @@ $methods = array(
     },
 
     'fetchMessage' => function($httpReq, $json, $storage) {
-        if (missingFields($httpReq, $json, ["userId"]))
+        if (missingFields($httpReq, $json, ["userId" => 'int_checker']))
             return;
         if (!$storage->getUser($json->userId)) {
             $httpReq->abort(400, "No such user $json->userId");
