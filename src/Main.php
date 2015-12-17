@@ -78,7 +78,11 @@ function main() {
                 $r->abort(400, "Invalid method");
                 return;
             }
-            $methods[$js->method]($r, $js, $st);
+            try {
+                $methods[$js->method]($r, $js, $st);
+            } catch (Exception $e) {
+                $r->abort(500, "inernal server error");
+            }
         });
     });
 
